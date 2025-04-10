@@ -30,8 +30,18 @@ DON(Decentralized Oracle Network) 去中心化预言机网络
 Chainlink就是一个著名的DON。    
 它能提供很多服务比如：  
 Data    
-Compute 
+Compute     
 Cross-chain  
+
+
+Data Feed WorkFlow 喂价     
+Data Source -> Data Providers -> DON -> Chainlink Data Feed Contract(喂价合约) -> User smart Contract 
+具体怎么使用：      
+Consumer 发送请求-> Proxy(代理合约) -> Aggregator(聚合合约) -> DON      
+因为DON会不断更新，所以聚合合约也会随着DON的更新而更新，      
+所以为了隐藏聚合合约的难度通常会 再加一层代理合约。也是为了保证Aggregator的修改时，用户合约不发生修改，所以要加一层代理合约，避免麻烦。     
+这就是喂价合约的工作原理。
+
 
 
 
