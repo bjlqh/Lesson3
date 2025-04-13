@@ -40,8 +40,32 @@ Data Source -> Data Providers -> DON -> Chainlink Data Feed Contract(喂价合�
 Consumer 发送请求-> Proxy(代理合约) -> Aggregator(聚合合约) -> DON      
 因为DON会不断更新，所以聚合合约也会随着DON的更新而更新，      
 所以为了隐藏聚合合约的难度通常会 再加一层代理合约。也是为了保证Aggregator的修改时，用户合约不发生修改，所以要加一层代理合约，避免麻烦。     
-这就是喂价合约的工作原理。
+这就是喂价合约的工作原理。      
 
 
+solidity中转账有3种方式：     
+transfer: transfer ETH and revert if tx failed   
+如果尝试向 msg.sender 转账（如 msg.sender.transfer(1 ether)），编译器会报错。     
+合约调用者（msg.sender）将当前合约的余额转走。        
+payable(msg.sender).transfer(address(this).balance);    
+
+send: transfer ETH and return false if failed          
+bool success = payable(msg.sender).send(address(this).balance);
+require(success, "tx failed");
+
+call: transfer ETH with data return value of function and bool  
+(succ, ) = payable(msg.sender).call{value: address(this).balance}("");
+
+时间锁  
+设定时间段，截止期就要开始结算了。  
+block.timestamp 是合约加入区块的时间戳      
+
+第三课。讲了使用区块链浏览器去调用合约，去查看合约中的数。对合约进行验证。以及如何去验证合约。      
+
+coin vs token   
+q币 和 点券的关系   
+
+
+通证合约
 
 

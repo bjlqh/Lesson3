@@ -10,13 +10,37 @@ contract FundMe {
 
     mapping (address => uint256) public funderToAmount;
 
-    uint256 MINIMUM_VALUE = 100 * 10 ** 18; //wei 
+    uint256 constant MINIMUM_VALUE = 100 * 10 ** 18; //wei 
 
     AggregatorV3Interface internal dataFeed;    //合约内部调用
 
-    constructor(){
+    uint256 constant TARGET = 1000 * 10 ** 18 ;  //常量
+
+    address public owner; 
+
+    /*
+        当前合约部署的时间
+    */
+    uint256 deploymentTimestamp;
+
+    //部署者去输入锁定期是多长时间
+    uint256 lockTime;
+
+    constructor(uint256 _lockTime){
         //Sepolia测试网
         dataFeed = AggregatorV3Interface(0x694AA1769357215DE4FAC081bf1f309aDC325306);
+        //合约部署人
+        owner = msg.sender;
+
+        deploymentTimestamp = block.timestamp;      //当前区块的时间点
+    
+        lockTime = _lockTime; 
+    }
+
+    //合约转移所有权
+    function transferOwnership(address newOwner) public onlyOwner {
+        //require(msg.sender == owner, "this function can only be called by owner");
+        owner = newOwner;
     }
 
     
@@ -28,6 +52,9 @@ contract FundMe {
             如果你的合约想要收取原生token，就需要payable这个关键字
     */
     function fund() external payable {
+        //锁定期
+        require(block.timestamp < deploymentTimestamp + lockTime, "window is closed");
+        //金额条件
         require(convertEthToUsd(msg.value) >= MINIMUM_VALUE, "Send more ETH");
         funderToAmount[msg.sender] = msg.value;       
     }
@@ -51,4 +78,51 @@ contract FundMe {
         // ETH / USE = 10^8  1个ETH值多少USD,由于chainlink对于获取到的usd的价格扩大了10^8，所以在将ETH转化为USD时，需要除以10^8
     }
 
+    //只有外部调用才有意义
+    //锁定期內，达到目标值，生产商可以提款
+    function getFund() external windowClosed onlyOwner {
+        //获取到合约地址,从地址中获取value
+        require(convertEthToUsd(address(this).balance) >= TARGET,"Target is not reached");
+        //合约的所有者，可以提钱
+        //require(msg.sender == owner,"this function can only be called by owner");
+        //require(block.timestamp >= deploymentTimestamp + lockTime,"window is not closed");
+        //transfer
+        payable(msg.sender).transfer(address(this).balance); 
+
+        //send
+        //bool success = payable(msg.sender).send(address(this).balance);
+        //require(success, "tx failed");
+
+        //call transfer ETH with data return value of function and bool
+        //bool succ;
+        //(succ, ) = payable(msg.sender).call{value: address(this).balance}("");
+        //提完钱，将map当中的数据归零
+        funderToAmount[msg.sender] = 0;
+    }
+
+
+    //锁定期內，没有达到目标值，投资人可以退款
+    function refund() external windowClosed {
+        require(convertEthToUsd(address(this).balance) < TARGET, "Target is reached");
+        //没有达成目标，那么你可以把你fund到账户里的钱，退回来
+        uint256 amount =  funderToAmount[msg.sender];
+        require(amount != 0, "there is no fund for you");
+
+        //说明你有fund这个合约。那么就可以退款了
+        bool succ;
+        (succ, ) = payable(msg.sender).call{value: address(this).balance}("");
+        require(succ, "transfer tx failed");
+        funderToAmount[msg.sender] = 0;
+    }
+
+    modifier windowClosed() {
+        require(block.timestamp >= deploymentTimestamp + lockTime,"window is not closed");
+        _;      //当前函数在调用之前，先执行上面的require操作
+    }
+
+
+    modifier onlyOwner() {
+        require(msg.sender == owner,"this function can only be called by owner");
+        _;
+    }
 }
