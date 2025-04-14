@@ -2,7 +2,8 @@
 
 pragma solidity ^0.8.20;
 
-constract FundToken {
+contract FundToken {
+
     //1、通证的名字
     //2、通证的简称
     //3、通证的发行数量
