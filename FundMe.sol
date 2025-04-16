@@ -26,6 +26,11 @@ contract FundMe {
     //部署者去输入锁定期是多长时间
     uint256 lockTime;
 
+    address erc20Addr;
+
+    //作为getFund函数成功被执行完以后的标记。
+    bool public getFundSuccess = false;
+
     constructor(uint256 _lockTime){
         //Sepolia测试网
         dataFeed = AggregatorV3Interface(0x694AA1769357215DE4FAC081bf1f309aDC325306);
@@ -35,6 +40,16 @@ contract FundMe {
         deploymentTimestamp = block.timestamp;      //当前区块的时间点
     
         lockTime = _lockTime; 
+    }
+
+    function setErc20Addr(address _erc20Addr) public onlyOwner{
+        erc20Addr = _erc20Addr;
+    }
+
+    //修改funderToAmount，只能被FundToTokenERC20合约修改
+    function setFunderToAmount(address funder, uint256 amountToUpdate) external {
+        require(msg.sender == erc20Addr, "you do not have permission to call this function");
+        funderToAmount[funder] = amountToUpdate;
     }
 
     //合约转移所有权
@@ -98,6 +113,7 @@ contract FundMe {
         //(succ, ) = payable(msg.sender).call{value: address(this).balance}("");
         //提完钱，将map当中的数据归零
         funderToAmount[msg.sender] = 0;
+        getFundSuccess = true;
     }
 
 
